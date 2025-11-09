@@ -1,0 +1,59 @@
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+README.md
+CLAUDE.md
+LICENSE
+*.md
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Recordings
+recordings/
+*.mp4
+*.mkv
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Build artifacts
+*.o
+*.a
+*.so
+*.dylib
+
+# OS files
+Thumbs.db
+desktop.ini
+
+# Docker files (no need to copy into image)
+docker-compose.yml
+docker-compose.*.yml
+Dockerfile*
+
+# Test files
+test/
+tests/
+*.test.js
+*.spec.js

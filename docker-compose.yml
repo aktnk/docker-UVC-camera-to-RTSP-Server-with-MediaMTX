@@ -1,0 +1,74 @@
+services:
+  # First camera service
+  camera1:
+    build: .
+    container_name: uvc-rtsp-camera1
+    privileged: true
+    devices:
+      - ${CAMERA1_DEVICE:-/dev/video0}:/dev/video0
+    ports:
+      - "${CAMERA1_RTSP_PORT:-8554}:8554"
+    environment:
+      - CAMERA_DEVICE=/dev/video0
+      - STREAM_NAME=${CAMERA1_STREAM_NAME:-camera1}
+      - VIDEO_SIZE=${CAMERA1_VIDEO_SIZE:-1280x720}
+      - FRAMERATE=${CAMERA1_FRAMERATE:-30}
+      - RTSP_USERNAME=${RTSP_USERNAME:-admin}
+      - RTSP_PASSWORD=${RTSP_PASSWORD:-admin}
+    volumes:
+      - ./mediamtx.yml:/config/mediamtx.yml:ro
+    restart: unless-stopped
+    networks:
+      - rtsp-network
+
+  # Second camera service (optional)
+  camera2:
+    build: .
+    container_name: uvc-rtsp-camera2
+    privileged: true
+    devices:
+      - ${CAMERA2_DEVICE:-/dev/video1}:/dev/video0
+    ports:
+      - "${CAMERA2_RTSP_PORT:-8555}:8554"
+    environment:
+      - CAMERA_DEVICE=/dev/video0
+      - STREAM_NAME=${CAMERA2_STREAM_NAME:-camera2}
+      - VIDEO_SIZE=${CAMERA2_VIDEO_SIZE:-1280x720}
+      - FRAMERATE=${CAMERA2_FRAMERATE:-30}
+      - RTSP_USERNAME=${RTSP_USERNAME:-admin}
+      - RTSP_PASSWORD=${RTSP_PASSWORD:-admin}
+    volumes:
+      - ./mediamtx.yml:/config/mediamtx.yml:ro
+    restart: unless-stopped
+    networks:
+      - rtsp-network
+    profiles:
+      - multi-camera
+
+  # Third camera service (optional)
+  camera3:
+    build: .
+    container_name: uvc-rtsp-camera3
+    privileged: true
+    devices:
+      - ${CAMERA3_DEVICE:-/dev/video2}:/dev/video0
+    ports:
+      - "${CAMERA3_RTSP_PORT:-8556}:8554"
+    environment:
+      - CAMERA_DEVICE=/dev/video0
+      - STREAM_NAME=${CAMERA3_STREAM_NAME:-camera3}
+      - VIDEO_SIZE=${CAMERA3_VIDEO_SIZE:-1280x720}
+      - FRAMERATE=${CAMERA3_FRAMERATE:-30}
+      - RTSP_USERNAME=${RTSP_USERNAME:-admin}
+      - RTSP_PASSWORD=${RTSP_PASSWORD:-admin}
+    volumes:
+      - ./mediamtx.yml:/config/mediamtx.yml:ro
+    restart: unless-stopped
+    networks:
+      - rtsp-network
+    profiles:
+      - multi-camera
+
+networks:
+  rtsp-network:
+    driver: bridge

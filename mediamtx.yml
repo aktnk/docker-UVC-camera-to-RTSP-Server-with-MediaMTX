@@ -1,0 +1,180 @@
+# MediaMTX Configuration for UVC Camera RTSP Streaming
+# Documentation: https://github.com/bluenviron/mediamtx
+
+# General settings
+logLevel: info
+logDestinations: [stdout]
+logFile: ""
+
+# API settings (disabled for security)
+api: no
+apiAddress: 127.0.0.1:9997
+
+# Metrics settings (disabled)
+metrics: no
+metricsAddress: 127.0.0.1:9998
+
+# PPROF settings (disabled)
+pprof: no
+pprofAddress: 127.0.0.1:9999
+
+# Playback server settings (disabled - no recording needed)
+playback: no
+playbackAddress: :9996
+
+# RTSP server settings
+rtsp: yes
+protocols: [tcp]
+encryption: "no"
+rtspAddress: :8554
+rtspsAddress: :8322
+rtpAddress: :8000
+rtcpAddress: :8001
+multicastIPRange: 224.1.0.0/16
+multicastRTPPort: 8002
+multicastRTCPPort: 8003
+serverKey: server.key
+serverCert: server.crt
+authMethods: [basic]
+
+# RTMP server (disabled)
+rtmp: no
+rtmpAddress: :1935
+rtmpEncryption: "no"
+rtmpsAddress: :1936
+rtmpServerKey: server.key
+rtmpServerCert: server.crt
+
+# HLS server (disabled)
+hls: no
+hlsAddress: :8888
+hlsEncryption: no
+hlsServerKey: server.key
+hlsServerCert: server.crt
+hlsAlwaysRemux: no
+hlsVariant: lowLatency
+hlsSegmentCount: 7
+hlsSegmentDuration: 1s
+hlsPartDuration: 200ms
+hlsSegmentMaxSize: 50M
+hlsAllowOrigin: '*'
+hlsTrustedProxies: []
+hlsDirectory: ''
+
+# WebRTC server (disabled)
+webrtc: no
+webrtcAddress: :8889
+webrtcEncryption: no
+webrtcServerKey: server.key
+webrtcServerCert: server.crt
+webrtcAllowOrigin: '*'
+webrtcTrustedProxies: []
+webrtcLocalUDPAddress: :8189
+webrtcLocalTCPAddress: :8189
+webrtcIPsFromInterfaces: yes
+webrtcIPsFromInterfacesList: []
+webrtcAdditionalHosts: []
+webrtcICEServers2: []
+
+# SRT server (disabled)
+srt: no
+srtAddress: :8890
+
+# Recording settings (disabled - recording not needed)
+record: no
+
+# Path defaults
+pathDefaults:
+  # Source settings
+  source: publisher
+  sourceFingerprint: ""
+  sourceOnDemand: no
+  sourceOnDemandStartTimeout: 10s
+  sourceOnDemandCloseAfter: 10s
+  maxReaders: 0
+
+  # SRT settings
+  srtReadPassphrase: ""
+
+  # Recording (disabled)
+  record: no
+  recordPath: ./recordings/%path/%Y-%m-%d_%H-%M-%S-%f
+  recordFormat: fmp4
+  recordPartDuration: 1s
+  recordSegmentDuration: 1h
+  recordDeleteAfter: 24h
+
+  # Authentication
+  # Environment variables RTSP_USERNAME and RTSP_PASSWORD will be used
+  # Default: admin/admin (change in production)
+  readUser: ""
+  readPass: ""
+  readIPs: []
+
+  # Publisher settings
+  publishUser: ""
+  publishPass: ""
+  publishIPs: []
+
+  # Redirect
+  overridePublisher: yes
+  srtPublishPassphrase: ""
+
+  # Fallback
+  fallback: ""
+
+  # Run on events
+  runOnInit: ""
+  runOnInitRestart: no
+  runOnDemand: ""
+  runOnDemandRestart: no
+  runOnDemandStartTimeout: 10s
+  runOnDemandCloseAfter: 10s
+  runOnUnDemand: ""
+  runOnReady: ""
+  runOnNotReady: ""
+  runOnRead: ""
+  runOnUnread: ""
+  runOnRecordSegmentCreate: ""
+  runOnRecordSegmentComplete: ""
+
+# Path definitions
+# These paths will be used by FFmpeg to publish camera streams
+paths:
+  # Dynamic path for camera streams
+  # Matches: /camera1, /camera2, /camera3, etc.
+  "~^camera[0-9]+$":
+    # Require authentication for reading
+    readUser: ${RTSP_USERNAME}
+    readPass: ${RTSP_PASSWORD}
+    # Require authentication for publishing (from FFmpeg)
+    publishUser: ${RTSP_USERNAME}
+    publishPass: ${RTSP_PASSWORD}
+    # No recording
+    record: no
+
+  # Alternative: specific camera paths
+  camera1:
+    # Authentication for reading only
+    readUser: ${RTSP_USERNAME}
+    readPass: ${RTSP_PASSWORD}
+    readIPs: []
+    # No authentication for publishing (internal FFmpeg from localhost)
+    publishUser: ''
+    publishPass: ''
+    publishIPs: ['127.0.0.0/8', '::1/128']
+    record: no
+
+  camera2:
+    readUser: ${RTSP_USERNAME}
+    readPass: ${RTSP_PASSWORD}
+    publishUser: ${RTSP_USERNAME}
+    publishPass: ${RTSP_PASSWORD}
+    record: no
+
+  camera3:
+    readUser: ${RTSP_USERNAME}
+    readPass: ${RTSP_PASSWORD}
+    publishUser: ${RTSP_USERNAME}
+    publishPass: ${RTSP_PASSWORD}
+    record: no

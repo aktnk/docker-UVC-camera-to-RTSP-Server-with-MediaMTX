@@ -8,7 +8,7 @@ Docker-based solution for streaming UVC (USB Video Class) camera feeds as RTSP s
 - 🔒 **Authentication** - Basic authentication for secure access
 - 🐧 **Linux Support** - Native USB device passthrough
 - 🪟 **Windows Support** - WSL2 with USB/IP device sharing
-- 🪶 **Lightweight** - Alpine Linux base (~100-150MB image)
+- 🪶 **Lightweight** - Alpine Linux base (~137MB image)
 - 🔄 **Auto Restart** - Automatic process monitoring and restart
 - ⚙️ **Flexible Configuration** - Environment variable based setup
 
@@ -167,6 +167,7 @@ cv2.destroyAllWindows()
 | `CAMERA1_VIDEO_SIZE` | 1280x720 | Camera 1 resolution |
 | `CAMERA1_FRAMERATE` | 30 | Camera 1 framerate (fps) |
 | `CAMERA1_RTSP_PORT` | 8554 | Camera 1 RTSP port |
+| `BITRATE` | 2000k | Video bitrate (can be set per camera in .env) |
 | `CAMERA2_DEVICE` | /dev/video1 | Camera 2 device path |
 | `CAMERA2_RTSP_PORT` | 8555 | Camera 2 RTSP port |
 | `CAMERA3_DEVICE` | /dev/video2 | Camera 3 device path |
@@ -305,7 +306,7 @@ docker compose ps
    ```
 
 3. Try different input format:
-   Edit [entrypoint.sh](entrypoint.sh:55-76) and change `-input_format mjpeg` to `-input_format yuyv422`
+   Edit [entrypoint.sh](entrypoint.sh:67-87) and change `-input_format mjpeg` to `-input_format yuyv422`
 
 ### Multiple Cameras Not Working
 
@@ -324,11 +325,66 @@ docker compose ps
 
 3. Ensure ports don't conflict in `.env`
 
+### Authentication Failed (401 Unauthorized)
+
+**Problem**: Cannot authenticate to RTSP stream
+
+**Solutions**:
+1. Verify credentials in `.env`:
+   ```bash
+   cat .env | grep RTSP_
+   ```
+
+2. Check generated configuration:
+   ```bash
+   docker compose exec camera1 cat /tmp/mediamtx_runtime.yml | grep -A5 "camera1:"
+   ```
+
+3. Ensure environment variables are correctly set:
+   ```bash
+   docker compose exec camera1 sh -c 'echo "User: $RTSP_USERNAME, Pass: $RTSP_PASSWORD"'
+   ```
+
+4. Rebuild container after changing `.env`:
+   ```bash
+   docker compose down
+   docker compose up -d camera1
+   ```
+
+## Implementation Details
+
+### Environment Variable Expansion
+
+This project uses `envsubst` to dynamically generate the MediaMTX configuration at runtime:
+
+1. **Template file**: [mediamtx.yml](mediamtx.yml) contains placeholders like `${RTSP_USERNAME}`
+2. **Runtime generation**: [entrypoint.sh](entrypoint.sh:123-127) uses `envsubst` to replace variables
+3. **Generated config**: `/tmp/mediamtx_runtime.yml` is used by MediaMTX
+
+This approach ensures:
+- Sensitive credentials are not hardcoded
+- Configuration can be changed via `.env` file
+- Same Docker image can be used with different settings
+
+### Authentication Architecture
+
+- **Reading (Viewing)**: Requires Basic authentication via `readUser`/`readPass`
+- **Publishing (FFmpeg → MediaMTX)**: IP-based whitelist (localhost only)
+- **Security**: Publish authentication disabled for internal connections, enabled for external viewing
+
+### Important Files
+
+- **`.env`**: Contains your actual credentials (NOT tracked by Git)
+- **`.env.example`**: Template for environment variables (tracked by Git)
+- **`.gitignore`**: Prevents sensitive files from being committed
+
+⚠️ **Never commit `.env` to Git!** It contains your authentication credentials.
+
 ## Advanced Configuration
 
 ### Custom FFmpeg Settings
 
-Edit [entrypoint.sh](entrypoint.sh:55-76) to customize FFmpeg encoding:
+Edit [entrypoint.sh](entrypoint.sh:67-87) to customize FFmpeg encoding:
 
 ```bash
 ffmpeg \
