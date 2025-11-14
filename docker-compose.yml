@@ -3,7 +3,6 @@ services:
   camera1:
     build: .
     container_name: uvc-rtsp-camera1
-    privileged: true
     devices:
       - ${CAMERA1_DEVICE:-/dev/video0}:/dev/video0
     ports:
@@ -25,7 +24,6 @@ services:
   camera2:
     build: .
     container_name: uvc-rtsp-camera2
-    privileged: true
     devices:
       - ${CAMERA2_DEVICE:-/dev/video1}:/dev/video0
     ports:
@@ -43,13 +41,12 @@ services:
     networks:
       - rtsp-network
     profiles:
-      - multi-camera
+      - multi-camera1
 
   # Third camera service (optional)
   camera3:
     build: .
     container_name: uvc-rtsp-camera3
-    privileged: true
     devices:
       - ${CAMERA3_DEVICE:-/dev/video2}:/dev/video0
     ports:
@@ -67,7 +64,7 @@ services:
     networks:
       - rtsp-network
     profiles:
-      - multi-camera
+      - multi-camera2
 
 networks:
   rtsp-network:

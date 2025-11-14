@@ -102,8 +102,11 @@ docker compose up -d camera1
 ### 5. Start Multiple Cameras
 
 ```bash
-# Start all cameras defined in compose file
-docker compose --profile multi-camera up -d
+# Start camera1 + camera2 (profile: multi-camera1)
+docker compose --profile multi-camera1 up -d
+
+# Start camera1 + camera3 (profile: multi-camera2)
+docker compose --profile multi-camera2 up -d
 ```
 
 ## Usage
@@ -195,17 +198,22 @@ Common values: `15`, `24`, `30`, `60` (fps)
 
 ```bash
 # Start services
-docker compose up -d                          # Start camera1 only
-docker compose --profile multi-camera up -d   # Start all cameras
+docker compose up -d                           # Start camera1 only
+docker compose --profile multi-camera1 up -d   # Start camera1 + camera2
+docker compose --profile multi-camera2 up -d   # Start camera1 + camera3
 
 # View logs
 docker compose logs -f camera1
-docker compose logs -f                        # All services
+docker compose logs -f                         # All running services
 
 # Stop services
 docker compose down
 
-# Rebuild after configuration changes
+# Restart after configuration changes
+docker compose restart camera1                 # Restart specific camera
+docker compose restart                         # Restart all
+
+# Rebuild after code changes
 docker compose build
 docker compose up -d --force-recreate
 
@@ -325,30 +333,81 @@ docker compose ps
 
 3. Ensure ports don't conflict in `.env`
 
+4. **Important**: This project does NOT use `privileged: true` mode for security reasons
+   - Each container only sees the specific camera device mapped to it
+   - Verify device mappings in [docker-compose.yml](docker-compose.yml)
+
+### Resource Busy Error
+
+**Problem**: FFmpeg fails with "Resource busy" error when accessing camera
+
+**Common Cause**: Multiple processes or containers trying to access the same camera device
+
+**Solutions**:
+1. Check if another process is using the camera:
+   ```bash
+   sudo lsof /dev/video0
+   fuser /dev/video0
+   ```
+
+2. Ensure each camera container maps to a different physical device:
+   - Camera 1: `/dev/video0` (host) → `/dev/video0` (container)
+   - Camera 2: `/dev/video1` (host) → `/dev/video0` (container)
+   - Camera 3: `/dev/video2` (host) → `/dev/video0` (container)
+
+3. Verify device mappings in running containers:
+   ```bash
+   docker inspect uvc-rtsp-camera1 --format='{{json .HostConfig.Devices}}' | python3 -m json.tool
+   ```
+
+4. Stop conflicting containers:
+   ```bash
+   docker compose down
+   docker compose up -d camera1  # Start only the camera you need
+   ```
+
 ### Authentication Failed (401 Unauthorized)
 
 **Problem**: Cannot authenticate to RTSP stream
 
 **Solutions**:
-1. Verify credentials in `.env`:
+
+**For Viewing Streams** (Expected - credentials required):
+1. Verify you're using correct credentials:
    ```bash
    cat .env | grep RTSP_
    ```
 
-2. Check generated configuration:
+2. Include credentials in RTSP URL:
    ```bash
-   docker compose exec camera1 cat /tmp/mediamtx_runtime.yml | grep -A5 "camera1:"
+   # Correct
+   rtsp://admin:admin@localhost:8554/camera1
+
+   # Wrong (will fail with 401)
+   rtsp://localhost:8554/camera1
    ```
 
-3. Ensure environment variables are correctly set:
+**For Publishing Issues** (FFmpeg → MediaMTX):
+
+If you see `401 Unauthorized` in container logs during startup:
+
+1. Check generated configuration has empty publish credentials:
    ```bash
-   docker compose exec camera1 sh -c 'echo "User: $RTSP_USERNAME, Pass: $RTSP_PASSWORD"'
+   docker compose exec camera1 cat /tmp/mediamtx_runtime.yml | grep -A8 "camera1:"
    ```
 
-4. Rebuild container after changing `.env`:
+   Should show:
+   ```yaml
+   publishUser: ''
+   publishPass: ''
+   publishIPs: ['127.0.0.0/8', '::1/128']
+   ```
+
+2. Verify all camera paths (`camera1`, `camera2`, `camera3`) have identical settings in [mediamtx.yml](mediamtx.yml#L157-L188)
+
+3. Restart container after configuration changes:
    ```bash
-   docker compose down
-   docker compose up -d camera1
+   docker compose restart camera1
    ```
 
 ## Implementation Details
@@ -368,9 +427,24 @@ This approach ensures:
 
 ### Authentication Architecture
 
-- **Reading (Viewing)**: Requires Basic authentication via `readUser`/`readPass`
-- **Publishing (FFmpeg → MediaMTX)**: IP-based whitelist (localhost only)
-- **Security**: Publish authentication disabled for internal connections, enabled for external viewing
+The authentication setup separates internal publishing from external viewing:
+
+- **Reading (Viewing Streams)**:
+  - Requires Basic authentication via `readUser`/`readPass`
+  - All RTSP clients must provide credentials
+  - Example: `rtsp://admin:admin@localhost:8554/camera1`
+
+- **Publishing (FFmpeg → MediaMTX)**:
+  - **No authentication required** for localhost connections
+  - IP-based whitelist: `127.0.0.0/8` (IPv4) and `::1/128` (IPv6)
+  - FFmpeg publishes internally without credentials
+  - Configuration in [mediamtx.yml](mediamtx.yml#L157-L188)
+
+- **Security Benefits**:
+  - External viewers need credentials to watch streams
+  - Internal FFmpeg process connects without auth overhead
+  - Localhost-only publishing prevents external unauthorized publishers
+  - Each camera path (`camera1`, `camera2`, `camera3`) has identical auth settings
 
 ### Important Files
 
@@ -434,10 +508,14 @@ Edit [mediamtx.yml](mediamtx.yml) for advanced MediaMTX configuration:
 ## Security Considerations
 
 1. **Change Default Credentials**: Always modify `RTSP_USERNAME` and `RTSP_PASSWORD`
-2. **Network Isolation**: Use Docker networks to isolate services
-3. **Firewall Rules**: Only expose necessary ports
-4. **HTTPS/TLS**: Consider using encryption for production (edit `mediamtx.yml`)
-5. **Regular Updates**: Keep base images and MediaMTX updated
+2. **No Privileged Mode**: This project does NOT use `privileged: true` for better security
+   - Containers only access specifically mapped camera devices
+   - Reduces attack surface and prevents unauthorized device access
+3. **Network Isolation**: Use Docker networks to isolate services
+4. **Localhost-Only Publishing**: FFmpeg can only publish from within the container (127.0.0.0/8)
+5. **Firewall Rules**: Only expose necessary ports
+6. **HTTPS/TLS**: Consider using encryption for production (edit `mediamtx.yml`)
+7. **Regular Updates**: Keep base images and MediaMTX updated
 
 ## Architecture
 

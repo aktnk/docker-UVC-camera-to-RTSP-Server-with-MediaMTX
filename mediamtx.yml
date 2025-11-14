@@ -166,15 +166,23 @@ paths:
     record: no
 
   camera2:
+    # Authentication for reading only
     readUser: ${RTSP_USERNAME}
     readPass: ${RTSP_PASSWORD}
-    publishUser: ${RTSP_USERNAME}
-    publishPass: ${RTSP_PASSWORD}
+    readIPs: []
+    # No authentication for publishing (internal FFmpeg from localhost)
+    publishUser: ''
+    publishPass: ''
+    publishIPs: ['127.0.0.0/8', '::1/128']
     record: no
 
   camera3:
+    # Authentication for reading only
     readUser: ${RTSP_USERNAME}
     readPass: ${RTSP_PASSWORD}
-    publishUser: ${RTSP_USERNAME}
-    publishPass: ${RTSP_PASSWORD}
+    readIPs: []
+    # No authentication for publishing (internal FFmpeg from localhost)
+    publishUser: ''
+    publishPass: ''
+    publishIPs: ['127.0.0.0/8', '::1/128']
     record: no
