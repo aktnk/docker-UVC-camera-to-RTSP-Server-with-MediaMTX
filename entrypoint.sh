@@ -13,6 +13,7 @@ STREAM_NAME="${STREAM_NAME:-camera1}"
 VIDEO_SIZE="${VIDEO_SIZE:-1280x720}"
 FRAMERATE="${FRAMERATE:-30}"
 BITRATE="${BITRATE:-2000k}"
+INPUT_FORMAT="${INPUT_FORMAT:-mjpeg}"  # mjpeg or yuyv422
 RTSP_USERNAME="${RTSP_USERNAME:-admin}"
 RTSP_PASSWORD="${RTSP_PASSWORD:-admin}"
 
@@ -25,6 +26,7 @@ echo "Camera Device: ${CAMERA_DEVICE}"
 echo "Video Size: ${VIDEO_SIZE}"
 echo "Framerate: ${FRAMERATE}"
 echo "Bitrate: ${BITRATE}"
+echo "Input Format: ${INPUT_FORMAT}"
 echo ""
 
 # Check if camera device exists
@@ -63,26 +65,34 @@ start_ffmpeg() {
     echo ""
     echo "Starting FFmpeg capture and streaming..."
 
-    # FFmpeg command to capture from UVC camera and stream to MediaMTX
-    ffmpeg \
-        -f v4l2 \
-        -input_format mjpeg \
-        -video_size "${VIDEO_SIZE}" \
-        -framerate "${FRAMERATE}" \
-        -i "${CAMERA_DEVICE}" \
-        -c:v libx264 \
-        -preset ultrafast \
-        -tune zerolatency \
-        -b:v "${BITRATE}" \
-        -maxrate "${BITRATE}" \
-        -bufsize $(($(echo ${BITRATE} | sed 's/k//') * 2))k \
-        -pix_fmt yuv420p \
-        -g $((FRAMERATE * 2)) \
-        -keyint_min "${FRAMERATE}" \
-        -sc_threshold 0 \
-        -f rtsp \
-        -rtsp_transport tcp \
-        "${RTSP_ENDPOINT}" &
+    # Build FFmpeg command based on input format
+    local FFMPEG_CMD="ffmpeg -f v4l2"
+
+    # Add input format option only for MJPEG
+    if [ "${INPUT_FORMAT}" = "mjpeg" ]; then
+        FFMPEG_CMD="${FFMPEG_CMD} -input_format mjpeg"
+    fi
+
+    # Continue building the command
+    FFMPEG_CMD="${FFMPEG_CMD} -video_size ${VIDEO_SIZE}"
+    FFMPEG_CMD="${FFMPEG_CMD} -framerate ${FRAMERATE}"
+    FFMPEG_CMD="${FFMPEG_CMD} -i ${CAMERA_DEVICE}"
+    FFMPEG_CMD="${FFMPEG_CMD} -c:v libx264"
+    FFMPEG_CMD="${FFMPEG_CMD} -preset ultrafast"
+    FFMPEG_CMD="${FFMPEG_CMD} -tune zerolatency"
+    FFMPEG_CMD="${FFMPEG_CMD} -b:v ${BITRATE}"
+    FFMPEG_CMD="${FFMPEG_CMD} -maxrate ${BITRATE}"
+    FFMPEG_CMD="${FFMPEG_CMD} -bufsize $(($(echo ${BITRATE} | sed 's/k//') * 2))k"
+    FFMPEG_CMD="${FFMPEG_CMD} -pix_fmt yuv420p"
+    FFMPEG_CMD="${FFMPEG_CMD} -g $((FRAMERATE * 2))"
+    FFMPEG_CMD="${FFMPEG_CMD} -keyint_min ${FRAMERATE}"
+    FFMPEG_CMD="${FFMPEG_CMD} -sc_threshold 0"
+    FFMPEG_CMD="${FFMPEG_CMD} -f rtsp"
+    FFMPEG_CMD="${FFMPEG_CMD} -rtsp_transport tcp"
+    FFMPEG_CMD="${FFMPEG_CMD} ${RTSP_ENDPOINT}"
+
+    # Execute FFmpeg in background
+    eval "${FFMPEG_CMD}" &
 
     FFMPEG_PID=$!
     echo -e "${GREEN}FFmpeg started (PID: ${FFMPEG_PID})${NC}"

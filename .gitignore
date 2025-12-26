@@ -14,6 +14,7 @@ logs/
 # Temporary files
 *.tmp
 *.temp
+memo*.txt
 tmp/
 temp/
 
