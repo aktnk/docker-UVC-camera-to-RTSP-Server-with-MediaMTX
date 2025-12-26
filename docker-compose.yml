@@ -12,6 +12,8 @@ services:
       - STREAM_NAME=${CAMERA1_STREAM_NAME:-camera1}
       - VIDEO_SIZE=${CAMERA1_VIDEO_SIZE:-1280x720}
       - FRAMERATE=${CAMERA1_FRAMERATE:-30}
+      - INPUT_FORMAT=${CAMERA1_INPUT_FORMAT:-mjpeg}
+      - ON_DEMAND=${CAMERA1_ON_DEMAND:-false}
       - RTSP_USERNAME=${RTSP_USERNAME:-admin}
       - RTSP_PASSWORD=${RTSP_PASSWORD:-admin}
     volumes:
@@ -33,6 +35,8 @@ services:
       - STREAM_NAME=${CAMERA2_STREAM_NAME:-camera2}
       - VIDEO_SIZE=${CAMERA2_VIDEO_SIZE:-1280x720}
       - FRAMERATE=${CAMERA2_FRAMERATE:-30}
+      - INPUT_FORMAT=${CAMERA2_INPUT_FORMAT:-mjpeg}
+      - ON_DEMAND=${CAMERA2_ON_DEMAND:-false}
       - RTSP_USERNAME=${RTSP_USERNAME:-admin}
       - RTSP_PASSWORD=${RTSP_PASSWORD:-admin}
     volumes:
@@ -57,6 +61,7 @@ services:
       - VIDEO_SIZE=${CAMERA3_VIDEO_SIZE:-1280x720}
       - FRAMERATE=${CAMERA3_FRAMERATE:-30}
       - INPUT_FORMAT=${CAMERA3_INPUT_FORMAT:-mjpeg}
+      - ON_DEMAND=${CAMERA3_ON_DEMAND:-false}
       - RTSP_USERNAME=${RTSP_USERNAME:-admin}
       - RTSP_PASSWORD=${RTSP_PASSWORD:-admin}
     volumes:

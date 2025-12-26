@@ -14,6 +14,7 @@ VIDEO_SIZE="${VIDEO_SIZE:-1280x720}"
 FRAMERATE="${FRAMERATE:-30}"
 BITRATE="${BITRATE:-2000k}"
 INPUT_FORMAT="${INPUT_FORMAT:-mjpeg}"  # mjpeg or yuyv422
+ON_DEMAND="${ON_DEMAND:-false}"  # true or false
 RTSP_USERNAME="${RTSP_USERNAME:-admin}"
 RTSP_PASSWORD="${RTSP_PASSWORD:-admin}"
 
@@ -27,6 +28,7 @@ echo "Video Size: ${VIDEO_SIZE}"
 echo "Framerate: ${FRAMERATE}"
 echo "Bitrate: ${BITRATE}"
 echo "Input Format: ${INPUT_FORMAT}"
+echo "On-Demand Mode: ${ON_DEMAND}"
 echo ""
 
 # Check if camera device exists
@@ -147,34 +149,55 @@ if ! wait_for_mediamtx; then
     exit 1
 fi
 
-# Start FFmpeg streaming
-start_ffmpeg
+# Decide whether to start FFmpeg immediately or wait for on-demand
+if [ "${ON_DEMAND}" = "true" ]; then
+    echo ""
+    echo -e "${GREEN}=== On-Demand Mode Active ===${NC}"
+    echo "Camera will start automatically when viewers connect"
+    echo "RTSP URL: rtsp://${RTSP_USERNAME}:${RTSP_PASSWORD}@<host-ip>:<port>/${STREAM_NAME}"
+    echo ""
+    echo "Press Ctrl+C to stop"
+    echo ""
 
-# Monitor processes
-echo ""
-echo -e "${GREEN}=== Streaming Active ===${NC}"
-echo "RTSP URL: rtsp://${RTSP_USERNAME}:${RTSP_PASSWORD}@<host-ip>:<port>/${STREAM_NAME}"
-echo ""
-echo "Press Ctrl+C to stop"
-echo ""
-
-# Keep the script running and monitor child processes
-while true; do
-    # Check if MediaMTX is still running
-    if ! kill -0 "${MEDIAMTX_PID}" 2>/dev/null; then
-        echo -e "${RED}ERROR: MediaMTX process died${NC}"
-        cleanup
-    fi
-
-    # Check if FFmpeg is still running
-    if [ -f /tmp/ffmpeg.pid ]; then
-        FFMPEG_PID=$(cat /tmp/ffmpeg.pid)
-        if ! kill -0 "${FFMPEG_PID}" 2>/dev/null; then
-            echo -e "${RED}ERROR: FFmpeg process died${NC}"
-            echo "Attempting to restart FFmpeg..."
-            start_ffmpeg
+    # In on-demand mode, just monitor MediaMTX
+    while true; do
+        # Check if MediaMTX is still running
+        if ! kill -0 "${MEDIAMTX_PID}" 2>/dev/null; then
+            echo -e "${RED}ERROR: MediaMTX process died${NC}"
+            cleanup
         fi
-    fi
+        sleep 5
+    done
+else
+    # Start FFmpeg streaming immediately (legacy mode)
+    start_ffmpeg
 
-    sleep 5
-done
+    # Monitor processes
+    echo ""
+    echo -e "${GREEN}=== Streaming Active ===${NC}"
+    echo "RTSP URL: rtsp://${RTSP_USERNAME}:${RTSP_PASSWORD}@<host-ip>:<port>/${STREAM_NAME}"
+    echo ""
+    echo "Press Ctrl+C to stop"
+    echo ""
+
+    # Keep the script running and monitor child processes
+    while true; do
+        # Check if MediaMTX is still running
+        if ! kill -0 "${MEDIAMTX_PID}" 2>/dev/null; then
+            echo -e "${RED}ERROR: MediaMTX process died${NC}"
+            cleanup
+        fi
+
+        # Check if FFmpeg is still running
+        if [ -f /tmp/ffmpeg.pid ]; then
+            FFMPEG_PID=$(cat /tmp/ffmpeg.pid)
+            if ! kill -0 "${FFMPEG_PID}" 2>/dev/null; then
+                echo -e "${RED}ERROR: FFmpeg process died${NC}"
+                echo "Attempting to restart FFmpeg..."
+                start_ffmpeg
+            fi
+        fi
+
+        sleep 5
+    done
+fi

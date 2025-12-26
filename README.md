@@ -6,6 +6,8 @@ Docker-based solution for streaming UVC (USB Video Class) camera feeds as RTSP s
 
 - 📹 **Multiple Camera Support** - Stream from multiple USB cameras simultaneously
 - 🔒 **Authentication** - Basic authentication for secure access
+- ⚡ **On-Demand Streaming** - Cameras activate only when viewers connect (saves power & bandwidth)
+- 🎥 **Flexible Input Formats** - MJPEG and YUYV support for camera compatibility
 - 🐧 **Linux Support** - Native USB device passthrough
 - 🪟 **Windows Support** - WSL2 with USB/IP device sharing
 - 🪶 **Lightweight** - Alpine Linux base (~137MB image)
@@ -169,11 +171,17 @@ cv2.destroyAllWindows()
 | `CAMERA1_STREAM_NAME` | camera1 | Camera 1 stream name |
 | `CAMERA1_VIDEO_SIZE` | 1280x720 | Camera 1 resolution |
 | `CAMERA1_FRAMERATE` | 30 | Camera 1 framerate (fps) |
+| `CAMERA1_INPUT_FORMAT` | mjpeg | Camera 1 input format (mjpeg or yuyv422) |
+| `CAMERA1_ON_DEMAND` | false | Enable on-demand streaming (true or false) |
 | `CAMERA1_RTSP_PORT` | 8554 | Camera 1 RTSP port |
 | `BITRATE` | 2000k | Video bitrate (can be set per camera in .env) |
 | `CAMERA2_DEVICE` | /dev/video1 | Camera 2 device path |
+| `CAMERA2_INPUT_FORMAT` | mjpeg | Camera 2 input format (mjpeg or yuyv422) |
+| `CAMERA2_ON_DEMAND` | false | Enable on-demand streaming for camera 2 |
 | `CAMERA2_RTSP_PORT` | 8555 | Camera 2 RTSP port |
 | `CAMERA3_DEVICE` | /dev/video2 | Camera 3 device path |
+| `CAMERA3_INPUT_FORMAT` | mjpeg | Camera 3 input format (mjpeg or yuyv422) |
+| `CAMERA3_ON_DEMAND` | false | Enable on-demand streaming for camera 3 |
 | `CAMERA3_RTSP_PORT` | 8556 | Camera 3 RTSP port |
 
 ### Supported Video Sizes
@@ -313,8 +321,13 @@ docker compose ps
    docker compose logs -f camera1
    ```
 
-3. Try different input format:
-   Edit [entrypoint.sh](entrypoint.sh:67-87) and change `-input_format mjpeg` to `-input_format yuyv422`
+3. Try different input format in `.env`:
+   ```bash
+   # For cameras with MJPEG decode errors
+   CAMERA1_INPUT_FORMAT=yuyv422
+   ```
+
+   Note: YUYV may have lower maximum resolution/framerate than MJPEG on some cameras
 
 ### Multiple Cameras Not Working
 
@@ -456,9 +469,55 @@ The authentication setup separates internal publishing from external viewing:
 
 ## Advanced Configuration
 
+### On-Demand Streaming
+
+Enable on-demand mode to save power and bandwidth. Cameras will only activate when viewers connect:
+
+```bash
+# In .env
+CAMERA1_ON_DEMAND=true
+CAMERA2_ON_DEMAND=true
+CAMERA3_ON_DEMAND=true
+```
+
+**Benefits**:
+- 💡 Camera LED turns off when no viewers
+- ⚡ Reduced power consumption
+- 📉 Lower CPU usage when idle
+- 🔋 Extended camera lifespan
+
+**How it works**:
+1. Container starts with MediaMTX but without FFmpeg
+2. When a viewer connects via RTSP, MediaMTX triggers FFmpeg to start
+3. Camera activates and starts streaming
+4. When last viewer disconnects, FFmpeg stops after 10 seconds
+5. Camera deactivates (LED turns off)
+
+**Configuration**:
+- `runOnDemandCloseAfter: 10s` in [mediamtx.yml](mediamtx.yml) controls shutdown delay
+- Set to `false` in `.env` to return to always-on mode
+
+### Input Format Selection
+
+Some cameras may have issues with MJPEG encoding (decode errors, corrupted frames). Use YUYV format as alternative:
+
+```bash
+# In .env
+CAMERA1_INPUT_FORMAT=yuyv422  # Use YUYV instead of MJPEG
+```
+
+**When to use YUYV**:
+- Camera produces MJPEG decode errors in logs
+- MJPEG stream has artifacts or corruption
+- Camera supports higher resolution/fps in YUYV
+
+**Trade-offs**:
+- MJPEG: Higher compression, less USB bandwidth, may have decode issues on some cameras
+- YUYV: Uncompressed, more USB bandwidth, more compatible, no decode errors
+
 ### Custom FFmpeg Settings
 
-Edit [entrypoint.sh](entrypoint.sh:67-87) to customize FFmpeg encoding:
+Edit [entrypoint.sh](entrypoint.sh:61-100) to customize FFmpeg encoding:
 
 ```bash
 ffmpeg \
@@ -490,6 +549,7 @@ Edit [mediamtx.yml](mediamtx.yml) for advanced MediaMTX configuration:
 - Configure recording
 - Set up RTMP
 - Add webhook notifications
+- Adjust on-demand timings (`runOnDemandStartTimeout`, `runOnDemandCloseAfter`)
 
 ## Performance Optimization
 

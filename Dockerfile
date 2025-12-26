@@ -35,12 +35,14 @@ COPY --from=builder /mediamtx /usr/local/bin/mediamtx
 # Create necessary directories
 RUN mkdir -p /config /recordings
 
-# Copy configuration and entrypoint script
+# Copy configuration and scripts
 COPY mediamtx.yml /config/mediamtx.yml
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY camera-publisher.sh /usr/local/bin/camera-publisher.sh
 
-# Make entrypoint executable
-RUN chmod +x /usr/local/bin/entrypoint.sh
+# Make scripts executable
+RUN chmod +x /usr/local/bin/entrypoint.sh && \
+    chmod +x /usr/local/bin/camera-publisher.sh
 
 # Expose RTSP port
 EXPOSE 8554

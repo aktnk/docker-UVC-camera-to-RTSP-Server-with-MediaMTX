@@ -164,6 +164,11 @@ paths:
     publishPass: ''
     publishIPs: ['127.0.0.0/8', '::1/128']
     record: no
+    # On-demand streaming (camera activates only when viewers connect)
+    runOnDemand: /usr/local/bin/camera-publisher.sh
+    runOnDemandRestart: yes
+    runOnDemandStartTimeout: 10s
+    runOnDemandCloseAfter: 10s
 
   camera2:
     # Authentication for reading only
@@ -175,6 +180,11 @@ paths:
     publishPass: ''
     publishIPs: ['127.0.0.0/8', '::1/128']
     record: no
+    # On-demand streaming (camera activates only when viewers connect)
+    runOnDemand: /usr/local/bin/camera-publisher.sh
+    runOnDemandRestart: yes
+    runOnDemandStartTimeout: 10s
+    runOnDemandCloseAfter: 10s
 
   camera3:
     # Authentication for reading only
@@ -186,3 +196,8 @@ paths:
     publishPass: ''
     publishIPs: ['127.0.0.0/8', '::1/128']
     record: no
+    # On-demand streaming (camera activates only when viewers connect)
+    runOnDemand: /usr/local/bin/camera-publisher.sh
+    runOnDemandRestart: yes
+    runOnDemandStartTimeout: 10s
+    runOnDemandCloseAfter: 10s
